@@ -475,9 +475,11 @@ describe('endpoint interrogation', () => {
 
     fireEvent.click(screen.getByText(en.fetchModels))
     await screen.findByText(en.fetchTitle)
-    // The already-configured row starts unchecked; the new one starts checked.
+    // The already-configured row is shown as present (disabled checkbox, not a
+    // re-add target); only the new row is an active selection, already checked.
     const boxes = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
-    expect(boxes.map(box => box.checked)).toEqual([false, true])
+    expect(boxes.map(box => box.disabled)).toEqual([true, false])
+    expect(boxes.map(box => box.checked)).toEqual([true, true])
     fireEvent.click(screen.getByText(en.fetchAdopt))
 
     fireEvent.click(screen.getByText(en.apply))
@@ -649,14 +651,23 @@ describe('endpoint interrogation', () => {
     await screen.findByText(en.fetchTitle)
 
     // The already-configured candidate gets its own group heading, and the
-    // two headings appear in existing-then-new order with their rows attached.
+    // two headings appear in existing-then-new order.
     const existingHead = screen.getByText(en.fetchGroupExisting)
     const newHead = screen.getByText(en.fetchGroupNew)
     expect(existingHead.compareDocumentPosition(newHead) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // The existing row precedes the new row: existing-then-new order means the
-    // first checkbox is the existing one and it starts unchecked.
+
+    // The existing row is declared as already-present: its checkbox is disabled
+    // (it is not a re-add target), while the new row is an active checkbox that
+    // starts checked. Cleared explicitly to prove it is not part of the bulk set.
     const boxes = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
-    expect(boxes.map(box => box.checked)).toEqual([false, true])
+    expect(boxes.map(box => box.disabled)).toEqual([true, false])
+    expect(boxes.map(box => box.checked)).toEqual([true, true])
+
+    // The bulk toggle only touches the newly found rows: clearing it affects
+    // only the new row, leaving the disabled existing row as it is.
+    fireEvent.click(screen.getByRole('button', { name: en.fetchClearAll }))
+    const afterClear = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(afterClear.map(box => box.checked)).toEqual([true, false])
   })
 })
 

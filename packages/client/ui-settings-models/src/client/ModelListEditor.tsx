@@ -132,6 +132,24 @@ function CandidateRow(props: { candidate: string; picked: boolean; onToggle: (id
   )
 }
 
+/**
+ * One already-configured row in the fetch dialog. It has no checkbox: the model
+ * is already configured, so it is not a re-add target — attempting to "adopt"
+ * it again would silently overwrite a capacity the user corrected.
+ */
+function ExistingRow(props: { candidate: string }): ReactNode {
+  return (
+    <li className={styles['candidate']}>
+      <label className={styles['candidateLabel']}>
+        {/* A disabled checkbox keeps the layout aligned with the new rows
+            below while making the non-interactive state unambiguous. */}
+        <input type="checkbox" disabled checked />
+        <span className={styles['candidateId']}>{props.candidate}</span>
+      </label>
+    </li>
+  )
+}
+
 /** The two token counts edited as K/M-suffixed text behind a row's disclosure. */
 type CapacityField = 'contextWindow' | 'maxTokens'
 
@@ -309,24 +327,28 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
     })
   }
 
-  // One control flips between the two ends of the range: while anything is
-  // unchecked it reads as "select all" (fill the untouched half), and once
-  // every candidate is checked it reads as "clear" (return to the start).
-  const allPicked = candidates !== undefined && candidates.length > 0 && picked.size === candidates.length
-
-  const toggleAll = (): void => {
-    if (candidates === undefined || candidates.length === 0) return
-    setPicked(allPicked ? new Set() : new Set(candidates.map(candidate => candidate.id)))
-  }
-
   // Split the candidates into the ones already configured (shown first, so the
-  // user sees what they already have) and the newly found ones. Existing rows
-  // start unchecked — adopting never rewrites a capacity the user corrected —
-  // so the split is purely presentational: it keeps the two states from being
-  // mixed into one indistinguishable list.
+  // user sees what they already have) and the newly found ones. The already
+  // configured group is presentational — its rows are shown as present, not as
+  // re-add targets — and it is excluded from the bulk toggle: an already-added
+  // model is something to keep as-is, never something "select all" re-adds.
   const known = new Set(models.map(model => textOf(model, 'id')))
   const existing = (candidates ?? []).filter(candidate => known.has(candidate.id))
   const fresh = (candidates ?? []).filter(candidate => !known.has(candidate.id))
+
+  // The bulk toggle describes only the newly found group: while any new row is
+  // unchecked it reads as "select all" (fill the untouched half), and once
+  // every new row is checked it reads as "clear" (return to the start). The
+  // already-added group is never a target of the toggle.
+  const freshIds = new Set(fresh.map(candidate => candidate.id))
+  const allPicked = fresh.length > 0 && fresh.every(candidate => picked.has(candidate.id))
+
+  const toggleAll = (): void => {
+    if (fresh.length === 0) return
+    setPicked(allPicked
+      ? new Set([...picked].filter(id => !freshIds.has(id)))
+      : new Set([...picked, ...fresh.map(candidate => candidate.id)]))
+  }
 
   // A route the adapter already describes answers without an endpoint; only a
   // draft with neither has nothing to ask about.
@@ -497,9 +519,7 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
             ? (
               <>
                 <li className={styles['candidateGroupHead']}>{t('fetchGroupExisting')}</li>
-                {existing.map(candidate => (
-                  <CandidateRow key={candidate.id} candidate={candidate.id} picked={picked.has(candidate.id)} onToggle={toggle} />
-                ))}
+                {existing.map(candidate => <ExistingRow key={candidate.id} candidate={candidate.id} />)}
               </>
             )
             : null}
