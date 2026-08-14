@@ -290,6 +290,16 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
     })
   }
 
+  // One control flips between the two ends of the range: while anything is
+  // unchecked it reads as "select all" (fill the untouched half), and once
+  // every candidate is checked it reads as "clear" (return to the start).
+  const allPicked = candidates !== undefined && candidates.length > 0 && picked.size === candidates.length
+
+  const toggleAll = (): void => {
+    if (candidates === undefined || candidates.length === 0) return
+    setPicked(allPicked ? new Set() : new Set(candidates.map(candidate => candidate.id)))
+  }
+
   // A route the adapter already describes answers without an endpoint; only a
   // draft with neither has nothing to ask about.
   const askable = probe.provider !== undefined || (probe.baseURL !== undefined && probe.baseURL.length > 0)
@@ -445,6 +455,15 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
           </>
         )}
       >
+        <div className={styles['candidateToolbar']}>
+          <button
+            type="button"
+            className={styles['linkButton']}
+            onClick={toggleAll}
+          >
+            {allPicked ? t('fetchClearAll') : t('fetchSelectAll')}
+          </button>
+        </div>
         <ul className={styles['candidateList']}>
           {(candidates ?? []).map(candidate => (
             <li key={candidate.id} className={styles['candidate']}>

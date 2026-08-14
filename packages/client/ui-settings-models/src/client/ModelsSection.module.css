@@ -655,6 +655,15 @@ select.input {
   list-style: none;
 }
 
+/* The select-all / clear toggle sits above the scrolling candidate rows,
+   right-aligned so it reads as a bulk action on the list rather than part of
+   the description. */
+.candidateToolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+
 .candidate {
   border-radius: 6px;
 }

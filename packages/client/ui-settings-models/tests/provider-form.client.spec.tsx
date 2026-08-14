@@ -603,6 +603,37 @@ describe('endpoint interrogation', () => {
     // A disclosed output cap rides along with the candidate that has one.
     expect(firstMutate(mutate).ops[0]?.value).toEqual([{ id: 'a' }, { id: 'b', maxTokens: 2048 }])
   })
+
+  it('selects every candidate from the toggle, then clears them all', async () => {
+    const discover = vi.fn(() => Promise.resolve(ok({ models: [{ id: 'a' }, { id: 'b' }] })))
+    const { mutate } = await mountSection({ discover })
+    openEditor('openai')
+
+    fireEvent.click(screen.getByText(en.fetchModels))
+    await screen.findByText(en.fetchTitle)
+    // Nothing is configured, so both candidates already start checked and the
+    // toggle reads "clear"; flip to a full selection's opposite to exercise it.
+    const toggle = screen.getByRole('button', { name: en.fetchClearAll })
+    fireEvent.click(toggle)
+    let boxes = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(boxes.map(box => box.checked)).toEqual([false, false])
+    expect(screen.getByRole('button', { name: en.fetchSelectAll })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: en.fetchSelectAll }))
+    boxes = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(boxes.map(box => box.checked)).toEqual([true, true])
+
+    fireEvent.click(screen.getByRole('button', { name: en.fetchClearAll }))
+    boxes = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(boxes.map(box => box.checked)).toEqual([false, false])
+
+    fireEvent.click(screen.getByRole('button', { name: en.fetchSelectAll }))
+    fireEvent.click(screen.getByText(en.fetchAdopt))
+    fireEvent.click(screen.getByText(en.apply))
+
+    await waitFor(() => { expect(mutate).toHaveBeenCalled() })
+    expect(firstMutate(mutate).ops[0]?.value).toEqual([{ id: 'a' }, { id: 'b' }])
+  })
 })
 
 describe('provider rows', () => {
