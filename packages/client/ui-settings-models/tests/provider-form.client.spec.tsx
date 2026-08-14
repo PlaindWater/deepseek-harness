@@ -634,6 +634,30 @@ describe('endpoint interrogation', () => {
     await waitFor(() => { expect(mutate).toHaveBeenCalled() })
     expect(firstMutate(mutate).ops[0]?.value).toEqual([{ id: 'a' }, { id: 'b' }])
   })
+
+  it('pins already-added candidates above the newly found ones, keeping them unchecked', async () => {
+    const discover = vi.fn(() => Promise.resolve(ok({
+      models: [{ id: 'fresh' }, { id: 'kept' }],
+    })))
+    await mountSection({
+      discover,
+      providers: { openai: { baseURL: 'https://proxy.example/v1', models: [{ id: 'kept', contextWindow: 111 }] } },
+    })
+    openEditor('openai')
+
+    fireEvent.click(screen.getByText(en.fetchModels))
+    await screen.findByText(en.fetchTitle)
+
+    // The already-configured candidate gets its own group heading, and the
+    // two headings appear in existing-then-new order with their rows attached.
+    const existingHead = screen.getByText(en.fetchGroupExisting)
+    const newHead = screen.getByText(en.fetchGroupNew)
+    expect(existingHead.compareDocumentPosition(newHead) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The existing row precedes the new row: existing-then-new order means the
+    // first checkbox is the existing one and it starts unchecked.
+    const boxes = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(boxes.map(box => box.checked)).toEqual([false, true])
+  })
 })
 
 describe('provider rows', () => {

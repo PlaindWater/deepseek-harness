@@ -113,6 +113,25 @@ function IconTrash(): ReactNode {
   )
 }
 
+/** One candidate row in the fetch dialog: a checkbox over its model id. */
+function CandidateRow(props: { candidate: string; picked: boolean; onToggle: (id: string) => void }): ReactNode {
+  return (
+    <li className={styles['candidate']}>
+      <label className={styles['candidateLabel']}>
+        <input
+          type="checkbox"
+          checked={props.picked}
+          onChange={() => { props.onToggle(props.candidate) }}
+        />
+        {/* The id alone: it is the string adoption writes, and the capacities
+            the endpoint reported are adopted with it and editable in the row
+            that appears. */}
+        <span className={styles['candidateId']}>{props.candidate}</span>
+      </label>
+    </li>
+  )
+}
+
 /** The two token counts edited as K/M-suffixed text behind a row's disclosure. */
 type CapacityField = 'contextWindow' | 'maxTokens'
 
@@ -300,6 +319,15 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
     setPicked(allPicked ? new Set() : new Set(candidates.map(candidate => candidate.id)))
   }
 
+  // Split the candidates into the ones already configured (shown first, so the
+  // user sees what they already have) and the newly found ones. Existing rows
+  // start unchecked — adopting never rewrites a capacity the user corrected —
+  // so the split is purely presentational: it keeps the two states from being
+  // mixed into one indistinguishable list.
+  const known = new Set(models.map(model => textOf(model, 'id')))
+  const existing = (candidates ?? []).filter(candidate => known.has(candidate.id))
+  const fresh = (candidates ?? []).filter(candidate => !known.has(candidate.id))
+
   // A route the adapter already describes answers without an endpoint; only a
   // draft with neither has nothing to ask about.
   const askable = probe.provider !== undefined || (probe.baseURL !== undefined && probe.baseURL.length > 0)
@@ -465,21 +493,26 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
           </button>
         </div>
         <ul className={styles['candidateList']}>
-          {(candidates ?? []).map(candidate => (
-            <li key={candidate.id} className={styles['candidate']}>
-              <label className={styles['candidateLabel']}>
-                <input
-                  type="checkbox"
-                  checked={picked.has(candidate.id)}
-                  onChange={() => { toggle(candidate.id) }}
-                />
-                {/* The id alone: it is the string adoption writes, and the
-                    capacities the endpoint reported are adopted with it and
-                    editable in the row that appears. */}
-                <span className={styles['candidateId']}>{candidate.id}</span>
-              </label>
-            </li>
-          ))}
+          {existing.length > 0
+            ? (
+              <>
+                <li className={styles['candidateGroupHead']}>{t('fetchGroupExisting')}</li>
+                {existing.map(candidate => (
+                  <CandidateRow key={candidate.id} candidate={candidate.id} picked={picked.has(candidate.id)} onToggle={toggle} />
+                ))}
+              </>
+            )
+            : null}
+          {fresh.length > 0
+            ? (
+              <>
+                <li className={styles['candidateGroupHead']}>{t('fetchGroupNew')}</li>
+                {fresh.map(candidate => (
+                  <CandidateRow key={candidate.id} candidate={candidate.id} picked={picked.has(candidate.id)} onToggle={toggle} />
+                ))}
+              </>
+            )
+            : null}
         </ul>
       </Modal>
     </section>

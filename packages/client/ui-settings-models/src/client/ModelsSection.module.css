@@ -668,6 +668,18 @@ select.input {
   border-radius: 6px;
 }
 
+/* Group heading inside the candidate list: already-added models are pinned on
+   top and newly found ones below, so each group's heading labels the state
+   instead of letting the two mix into one indistinguishable list. */
+.candidateGroupHead {
+  margin-top: 4px;
+  padding: 8px 8px 2px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+
 .candidateLabel {
   display: flex;
   align-items: center;
